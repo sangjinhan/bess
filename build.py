@@ -12,7 +12,7 @@ BESS_DIR = os.path.dirname(os.path.abspath(__file__))
 DEPS_DIR = '%s/deps' % BESS_DIR
 
 DPDK_REPO = 'http://dpdk.org/browse/dpdk/snapshot'
-DPDK_VER = 'dpdk-17.02'
+DPDK_VER = 'dpdk-17.05'
 
 arch = subprocess.check_output('uname -m', shell=True).strip()
 if arch == 'x86_64':
@@ -36,10 +36,8 @@ ld_flags = []
 
 
 def cmd(cmd):
-    proc = subprocess.Popen(cmd,
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.STDOUT,
-                            shell=True)
+    proc = subprocess.Popen(
+        cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
 
     # err should be None
     out, err = proc.communicate()
@@ -52,10 +50,8 @@ def cmd(cmd):
 
 def cmd_success(cmd):
     try:
-        subprocess.check_call(cmd,
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.STDOUT,
-                              shell=True)
+        subprocess.check_call(
+            cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, shell=True)
         return True
     except subprocess.CalledProcessError:
         return False
@@ -111,7 +107,7 @@ def check_c_lib(lib):
 def required(header_file, lib_name, compiler):
     if not check_header(header_file, compiler):
         print >> sys.stderr, 'Error - #include <%s> failed. ' \
-                'Did you install "%s" package?' % (header_file, lib_name)
+            'Did you install "%s" package?' % (header_file, lib_name)
         sys.exit(1)
 
 
@@ -154,7 +150,7 @@ def check_bnx():
         extra_libs.add('z')
     else:
         print ' - "zlib1g-dev" is not available. ' \
-                'Disabling BNX2X PMD...'
+            'Disabling BNX2X PMD...'
         set_config(DPDK_FINAL_CONFIG, 'CONFIG_RTE_LIBRTE_BNX2X_PMD', 'n')
 
 
@@ -165,11 +161,11 @@ def check_mlx():
         # extra_libs.add('mlx5')
     else:
         print ' - "Mellanox OFED" is not available. ' \
-                'Disabling MLX4 and MLX5 PMDs...'
+            'Disabling MLX4 and MLX5 PMDs...'
         if check_header('infiniband/verbs.h', 'gcc'):
             print '   NOTE: "libibverbs-dev" does exist, but it does not ' \
-                    'work with MLX PMDs. Instead download OFED from ' \
-                    'http://www.melloanox.com'
+                'work with MLX PMDs. Instead download OFED from ' \
+                'http://www.melloanox.com'
         set_config(DPDK_FINAL_CONFIG, 'CONFIG_RTE_LIBRTE_MLX4_PMD', 'n')
         set_config(DPDK_FINAL_CONFIG, 'CONFIG_RTE_LIBRTE_MLX5_PMD', 'n')
 
@@ -178,8 +174,8 @@ def generate_dpdk_extra_mk():
     global extra_libs
 
     with open('core/extra.dpdk.mk', 'w') as fp:
-        fp.write('LIBS += %s\n' %
-                 ' '.join(map(lambda lib: '-l' + lib, extra_libs)))
+        fp.write(
+            'LIBS += %s\n' % ' '.join(map(lambda lib: '-l' + lib, extra_libs)))
 
 
 def generate_extra_mk():
@@ -225,8 +221,8 @@ def build_dpdk():
         try:
             print 'Decompressing DPDK...'
             cmd('mkdir -p %s' % DPDK_DIR)
-            cmd('tar zxf %s -C %s --strip-components 1' %
-                (DPDK_FILE, DPDK_DIR))
+            cmd('tar zxf %s -C %s --strip-components 1' % (DPDK_FILE,
+                                                           DPDK_DIR))
         except:
             cmd('rm -rf %s' % (DPDK_DIR))
             raise
@@ -258,7 +254,7 @@ def build_bess():
 
     print 'Building BESS daemon...'
     cmd('bin/bessctl daemon stop 2> /dev/null || true')
-    cmd('rm -f core/bessd')     # force relink as DPDK might have been rebuilt
+    cmd('rm -f core/bessd')  # force relink as DPDK might have been rebuilt
     cmd('make -C core -j`nproc`')
     cmd('ln -f -s ../core/bessd bin/bessd')
 
@@ -268,10 +264,10 @@ def build_kmod():
 
     if os.getenv('KERNELDIR'):
         print 'Building BESS kernel module (%s) ...' % \
-                os.getenv('KERNELDIR')
+            os.getenv('KERNELDIR')
     else:
         print 'Building BESS kernel module (%s - running kernel) ...' % \
-                subprocess.check_output('uname -r', shell=True).strip()
+            subprocess.check_output('uname -r', shell=True).strip()
 
     cmd('sudo -n rmmod bess 2> /dev/null || true')
     try:
@@ -316,11 +312,18 @@ def update_benchmark_path(path):
 def main():
     os.chdir(BESS_DIR)
     parser = argparse.ArgumentParser(description='Build BESS')
-    parser.add_argument('action', metavar='action', nargs='?', default='all',
-                        help='Action is one of all, dpdk, bess, kmod, clean'
-                             ' dist_clean, help')
-    parser.add_argument('--with-benchmark', dest='benchmark_path', nargs=1,
-                        help='Location of benchmark library')
+    parser.add_argument(
+        'action',
+        metavar='action',
+        nargs='?',
+        default='all',
+        help='Action is one of all, dpdk, bess, kmod, clean'
+        ' dist_clean, help')
+    parser.add_argument(
+        '--with-benchmark',
+        dest='benchmark_path',
+        nargs=1,
+        help='Location of benchmark library')
     args = parser.parse_args()
 
     if args.benchmark_path:
@@ -343,6 +346,7 @@ def main():
     else:
         print >> sys.stderr, 'Error - unknown command "%s".' % sys.argv[1]
         print_usage(parser)
+
 
 if __name__ == '__main__':
     main()
