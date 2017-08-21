@@ -92,7 +92,7 @@ void UnixSocketPort::AcceptNewClient() {
     // Close dropped connection (Send/Recv are resilient)
     epoll_ctl(epoll_fd_, EPOLL_CTL_DEL, client_fd_, &event);
     close(client_fd_);
-    client_fd_ = -1;
+    client_fd_ = kNotConnectedFd;
   }
 }
 
@@ -167,8 +167,13 @@ CommandResponse UnixSocketPort::Init(const bess::pb::UnixSocketPortArg &arg) {
 }
 
 void UnixSocketPort::DeInit() {
-  close(listen_fd_);
-  close(epoll_fd_);
+  if (listen_fd_ >= 0) {
+    close(listen_fd_);
+  }
+
+  if (epoll_fd_ >= 0) {
+    close(epoll_fd_);
+  }
 
   if (client_fd_ >= 0) {
     close(client_fd_);
