@@ -160,6 +160,7 @@ CommandResponse UnixSocketPort::Init(const bess::pb::UnixSocketPortArg &arg) {
     return CommandFailure(errno, "listen() failed");
   }
 
+  LOG(ERROR) << "Init" << listen_fd_ << ' ' << epoll_fd_ << ' ' << client_fd_;
   std::thread accept_thread(AcceptThreadMain, reinterpret_cast<void *>(this));
   accept_thread.detach();
 
@@ -167,6 +168,8 @@ CommandResponse UnixSocketPort::Init(const bess::pb::UnixSocketPortArg &arg) {
 }
 
 void UnixSocketPort::DeInit() {
+  LOG(ERROR) << "DeInit" << listen_fd_ << ' ' << epoll_fd_ << ' ' << client_fd_;
+
   if (listen_fd_ >= 0) {
     close(listen_fd_);
   }
