@@ -45,12 +45,14 @@ BESS_DIR_CONTAINER = '/build/bess'
 BUILD_SCRIPT = './build.py'
 PLUGINS = []
 
+CCACHE_DIR_HOST = '~/.ccache'
+CCACHE_DIR_CONTAINER = '/tmp/ccache'
 
 def docker_mount_args(plugins):
     """
     Return the string of arguments to "docker run" suitable for
-    mounting BESS_DIR_HOST as BESS_DIR_CONTAINER and all the
-    plugins under their original paths.
+    mounting BESS_DIR_HOST (as BESS_DIR_CONTAINER), ccache, and
+    all the plugins under their original paths.
 
     Note, the plugins must not live under the BESS_DIR_CONTAINER
     directory itself since that will not play well.  But plugins
@@ -65,7 +67,12 @@ def docker_mount_args(plugins):
             sys.exit('Error: plugin {!r}: path {!r} is taken by '
                      'bess'.format(path, BESS_DIR_CONTAINER))
 
-    ret = ['-v {}:{}'.format(BESS_DIR_HOST, BESS_DIR_CONTAINER)]
+    # If the ccache directory does not exist, create one owned by the current
+    # user (otherwise Docker will create one with root:root)
+    os.system('mkdir -p %s' % CCACHE_DIR_HOST)
+
+    ret = ['-v {}:{}'.format(CCACHE_DIR_HOST, CCACHE_DIR_CONTAINER),
+           '-v {}:{}'.format(BESS_DIR_HOST, BESS_DIR_CONTAINER)]
 
     # Make sure longer paths that are prefixes of shorter paths
     # appear after the shorter paths.  That way we mount only
@@ -102,16 +109,19 @@ def shell_quote(cmd):
     return "'" + cmd.replace("'", "'\\''") + "'"
 
 
+def docker_env_args():
+    env_vars = ['V', 'CXX', 'DEBUG', 'SANITIZE']
+    return ' '.join(['-e %s' % var for var in env_vars])
+
 def run_docker_cmd(cmd):
-    run_cmd('docker run -e V -e CXX -e DEBUG -e SANITIZE --rm -t '
-            '-u %d:%d %s %s sh -c %s' %
-            (os.getuid(), os.getgid(), docker_mount_args(PLUGINS),
-             IMAGE, shell_quote(cmd)))
+    run_cmd('docker run %s --rm -t -u %d:%d %s %s sh -c %s' %
+            (docker_env_args(), os.getuid(), os.getgid(),
+             docker_mount_args(PLUGINS), IMAGE, shell_quote(cmd)))
 
 
 def run_shell():
-    run_cmd('docker run -e V -e CXX -e DEBUG -e SANITIZE --rm -it %s %s' %
-            (docker_mount_args(PLUGINS), IMAGE))
+    run_cmd('docker run %s --rm -it -u 1000:1000 %s %s' %
+            (docker_env_args(), docker_mount_args(PLUGINS), IMAGE))
 
 
 def find_current_plugins():
